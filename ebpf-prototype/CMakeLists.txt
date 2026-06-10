@@ -29,8 +29,12 @@ ExternalProject_Add(libbpf
     GIT_TAG 445486dcbf9ddd8b3ca799a98ace58d23cee31a1
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE TRUE
-    BUILD_COMMAND ${MAKE} -C src
+    BUILD_COMMAND ${MAKE} -C src BUILD_STATIC_ONLY=1
+                  DESTDIR=${CMAKE_BINARY_DIR}/libbpf/install
+                  INCLUDEDIR= LIBDIR= UAPIDIR=
+                  install
     INSTALL_COMMAND ""
+    STEP_TARGETS build
 )
 
 ExternalProject_Add(bpftool
@@ -41,13 +45,15 @@ ExternalProject_Add(bpftool
     BUILD_IN_SOURCE TRUE
     BUILD_COMMAND ${MAKE} -C src
     INSTALL_COMMAND ""
+    STEP_TARGETS build
 )
 
 set(BPFOBJECT_VMLINUX_H ${CMAKE_CURRENT_SOURCE_DIR}/vmlinux/vmlinux.h)
 set(BPFOBJECT_BPFTOOL ${CMAKE_BINARY_DIR}/bpftool/src/bpftool/src/bootstrap/bpftool)
-set(LIBBPF_LIBRARIES ${CMAKE_BINARY_DIR}/libbpf/src/libbpf/src/libbpf.a)
-set(LIBBPF_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/libbpf/src/libbpf)
+set(LIBBPF_LIBRARIES ${CMAKE_BINARY_DIR}/libbpf/install/libbpf.a)
+set(LIBBPF_INCLUDE_DIRS ${CMAKE_BINARY_DIR}/libbpf/install)
 
+set(BPFOBJECT_BPF_DEPENDS libbpf-build bpftool-build)
 find_package(BpfObject REQUIRED)
 
 # Build object skeletons and depend skeleton on libbpf build
@@ -63,7 +69,8 @@ target_include_directories(loader PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(loader PRIVATE BEFORE SYSTEM
-    ${CMAKE_BINARY_DIR}/libbpf/src/libbpf/src
+    ${CMAKE_BINARY_DIR}/libbpf/install
+    ${CMAKE_BINARY_DIR}/libbpf/install/bpf
 )
 target_link_libraries(loader INTERFACE libbpf-build)
 target_link_libraries(loader PRIVATE egress_skel ingress_skel snet_cpp)

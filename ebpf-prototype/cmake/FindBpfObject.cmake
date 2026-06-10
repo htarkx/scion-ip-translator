@@ -167,7 +167,7 @@ macro(bpf_object name input)
             -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
     COMMAND_EXPAND_LISTS
     VERBATIM
-    DEPENDS ${BPF_C_FILE}
+    DEPENDS ${BPF_C_FILE} ${BPFOBJECT_BPF_DEPENDS}
     COMMENT "[clang] Building BPF object: ${name}")
 
   # Build BPF skeleton header
