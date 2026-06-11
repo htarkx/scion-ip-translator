@@ -1,10 +1,6 @@
 #ifndef SCION_H
 #define SCION_H
 
-#include <linux/in6.h>
-#include <linux/ipv6.h>
-#include <linux/types.h>
-
 #include "scion_types.h"
 
 // 8 bit identifying prefix (currently unassigned ULA range fc00::/8)

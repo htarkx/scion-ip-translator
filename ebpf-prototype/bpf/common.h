@@ -1,8 +1,12 @@
 #pragma once
 
-#include <linux/in6.h>
-#include <linux/ipv6.h>
-#include <linux/types.h>
+
+// Ethernet protocol numbers (from if_ether.h)
+#define ETH_P_IPV6 0x86DD
+
+// TC action codes (from pkt_cls.h)
+#define TC_ACT_OK    0
+#define TC_ACT_SHOT  2
 
 // Not exposed in the UAPI, so we have to declare it manually
 #define NEXTHDR_TCP 6

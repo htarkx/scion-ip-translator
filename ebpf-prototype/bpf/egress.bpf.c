@@ -1,15 +1,6 @@
-#include <linux/bpf.h>
-#include <linux/if_ether.h>
-#include <linux/in6.h>
-#include <linux/ipv6.h>
-#include <linux/pkt_cls.h>
-#include <linux/socket.h>
-// For some versions the UDP UAPI does not properly include typedef headers
-typedef __u16 __sum16;
-typedef __u32 __wsum;
+#include "vmlinux.h"
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_helpers.h>
-#include <linux/udp.h>
 
 #include "common.h"
 #include "scion.h"

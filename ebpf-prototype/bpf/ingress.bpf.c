@@ -1,8 +1,4 @@
-#include <linux/bpf.h>
-#include <linux/if_ether.h>
-#include <linux/in6.h>
-#include <linux/ipv6.h>
-#include <linux/udp.h>
+#include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 
 #include "common.h"

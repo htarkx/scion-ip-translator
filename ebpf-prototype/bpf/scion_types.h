@@ -22,7 +22,6 @@
 #define SCION_H_GUARD
 
 #include <bpf/bpf_endian.h>
-#include <linux/types.h>
 
 /* SCION common */
 
