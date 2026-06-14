@@ -57,6 +57,10 @@ func NewLoader(egressIf string, ingressIf string) (*Loader, error) {
 		ingressLink: i,
 	}, nil
 }
+func (l *Loader) EgressMaps() *EgressMaps {
+	return &l.egressObjs.EgressMaps
+}
+
 func (l *Loader) Close() error {
 	err := l.egressObjs.Close()
 	if err != nil {

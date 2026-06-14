@@ -11,6 +11,11 @@
 #define IST_PREFIX ((__u32)(0xFC << (32 - 8)))
 #define IST_PREFIX_MASK ((__u32)(0xFF << (32 - 8)))
 
+// TODO: scion_addr is a lossy compressed representation of a SCION IA address.
+// The SCION standard uses ISD=16bit + AS=48bit (total 64bit, see addr.IA in
+// the Go library). Here we truncate to ISD=12bit + AS=20bit to fit a u32.
+// This means only AS numbers <= 0xFFFFF (~1M) round-trip correctly; large
+// SCION-native AS numbers (e.g. ff00:0:1 = 0xff0000000001) will be corrupted.
 typedef __u32 scion_addr;
 
 #define SADDR_GET_ISD(k) (((k) >> 20) && 0xFFF)
