@@ -13,6 +13,18 @@ import (
 	"github.com/cilium/ebpf"
 )
 
+type EgressLpmKeyV6 struct {
+	_         structs.HostLayout
+	Prefixlen uint32
+	Addr      struct {
+		_    structs.HostLayout
+		In6U struct {
+			_       structs.HostLayout
+			U6Addr8 [16]uint8
+		}
+	}
+}
+
 type EgressPathMapEntry struct {
 	_      structs.HostLayout
 	Header struct {
@@ -89,8 +101,9 @@ type EgressProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type EgressMapSpecs struct {
-	PathMap *ebpf.MapSpec `ebpf:"path_map"`
-	PathReq *ebpf.MapSpec `ebpf:"path_req"`
+	Ipv6ToScion *ebpf.MapSpec `ebpf:"ipv6_to_scion"`
+	PathMap     *ebpf.MapSpec `ebpf:"path_map"`
+	PathReq     *ebpf.MapSpec `ebpf:"path_req"`
 }
 
 // EgressVariableSpecs contains global variables before they are loaded into the kernel.
@@ -119,12 +132,14 @@ func (o *EgressObjects) Close() error {
 //
 // It can be passed to LoadEgressObjects or ebpf.CollectionSpec.LoadAndAssign.
 type EgressMaps struct {
-	PathMap *ebpf.Map `ebpf:"path_map"`
-	PathReq *ebpf.Map `ebpf:"path_req"`
+	Ipv6ToScion *ebpf.Map `ebpf:"ipv6_to_scion"`
+	PathMap     *ebpf.Map `ebpf:"path_map"`
+	PathReq     *ebpf.Map `ebpf:"path_req"`
 }
 
 func (m *EgressMaps) Close() error {
 	return _EgressClose(
+		m.Ipv6ToScion,
 		m.PathMap,
 		m.PathReq,
 	)
