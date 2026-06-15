@@ -248,8 +248,9 @@ int scion_egress(struct __sk_buff *ctx) {
   __u32 *to = (__u32 *)sci_end;
   __u32 *from = (__u32 *)path->path;
 
-  if ((to + path->path_len) > (__u32 *)data_end)
-    TC_ACT_SHOT;
+  //the below check does not pass the verifier, explicit loop check is needed
+  //if ((to + path->path_len) > (__u32 *)data_end)
+  // return TC_ACT_SHOT;
 
   // TODO its quite unfortunate we have to do this expensive check every
   // iteration but the check above is not satisfying the verifier
@@ -270,8 +271,57 @@ int scion_egress(struct __sk_buff *ctx) {
                 bpf_ntohs(sci_hdr->payload));
   udp_hdr->len = ip6_hdr->payload_len;
 
-  // Adjust UDP checksum
-  // NOTE left to hw offload
+  // Adjust UDP checksum (IPv6 mandates a non-zero UDP checksum).
+  udp_hdr->check = 0;
+
+  // Prototype: cap the L4 so it fits a fixed stack buffer. We checksum a *stack*
+  // copy of the L4, not the packet directly — a csum_diff over a variable-length
+  // packet pointer is rejected by the verifier ("R3 offset is outside of the
+  // packet"), but a fixed-size stack buffer is checked against its own size.
+  //
+  // bpf_skb_load_bytes' length arg is ARG_CONST_SIZE: the verifier must prove it
+  // is in [1, sizeof(buf)]. Two subtleties bite here:
+  //   1. bpf_ntohs() lowers to a be16 swap; without a barrier LLVM hoists the
+  //      `== 0` test *ahead* of the swap, and the swap then mints a fresh scalar
+  //      whose range resets to [0,65535], discarding the proven lower bound.
+  //   2. A u32 length forces the compare to truncate via <<32/>>32, minting yet
+  //      another register and breaking the verifier's equal-scalars link, so the
+  //      narrowed [1,256] range never reaches the register fed to the helper.
+  // Using a u64 keeps the compare and the helper arg on one register, and the
+  // barrier pins both checks onto the post-swap value — together they leave the
+  // verifier with a clean [1,256] on the exact register passed as the length.
+  __u64 l4_len = bpf_ntohs(udp_hdr->len);
+  barrier_var(l4_len);
+  if (l4_len == 0 || l4_len > 256)
+    return TC_ACT_SHOT;
+  __u32 l4buf[64] = {}; // 256B, 4-byte aligned scratch for the L4 region
+  if (bpf_skb_load_bytes(ctx, sizeof(*eth_hdr) + sizeof(*ip6_hdr), l4buf,
+                         l4_len) < 0)
+    return TC_ACT_SHOT;
+
+  // IPv6 UDP pseudo-header (40 bytes): src(16) + dst(16) + len(4) + zero(3) + next(1).
+  struct {
+    struct in6_addr src;
+    struct in6_addr dst;
+    __be32 len;
+    __u8 zero[3];
+    __u8 nexthdr;
+  } __attribute__((packed)) psh = {};
+  _Static_assert(sizeof(psh) == 40, "pseudo hdr must be 40B");
+
+  psh.src = ip6_hdr->saddr;
+  psh.dst = ip6_hdr->daddr; // outer dst = router_addr (:9), set above
+  psh.len = bpf_htonl(l4_len);
+  psh.nexthdr = NEXTHDR_UDP;
+
+  __u32 csum = 0;
+  csum = bpf_csum_diff(0, 0, (void *)&psh, sizeof(psh), csum);  // pseudo-header
+  csum = bpf_csum_diff(0, 0, (void *)l4buf, l4_len, csum);      // UDP + SCION + payload
+
+  csum = (csum & 0xffff) + (csum >> 16);
+  csum = (csum & 0xffff) + (csum >> 16);
+  __u16 check = (__u16)~csum;
+  udp_hdr->check = check ? check : 0xffff;
 
   // bpf_printk("Finished packet rewriting");
   return adjust_eth(ctx, eth_hdr, ip6_hdr);

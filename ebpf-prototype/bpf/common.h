@@ -22,6 +22,12 @@
 
 #define BPF_PRINT_DEBUG(str) do { bpf_printk((str)); } while(0)
 
+// Compiler barrier that pins `var` into a register as an opaque value. Prevents
+// LLVM from hoisting later bounds checks across instructions like a be16 swap,
+// which would otherwise reset the verifier's tracked range and lose a proven
+// lower bound (the classic "R4 invalid zero-sized read" on ARG_CONST_SIZE).
+#define barrier_var(var) asm volatile("" : "=r"(var) : "0"(var))
+
 static inline __u16 udp_csum(struct in6_addr *saddr, struct in6_addr *daddr, __u8 proto, __u16 udp_len) {
   __u32 res = 0;
 
